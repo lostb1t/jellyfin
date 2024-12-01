@@ -60,6 +60,7 @@ public class DisplayPreferencesController : BaseJellyfinApiController
         }
 
         var displayPreferences = _displayPreferencesManager.GetDisplayPreferences(userId.Value, itemId, client);
+        var customPrefs = _displayPreferencesManager.ListCustomItemDisplayPreferences(userId.Value, itemId, client);
         var itemPreferences = _displayPreferencesManager.GetItemDisplayPreferences(displayPreferences.UserId, itemId, displayPreferences.Client);
         itemPreferences.ItemId = itemId;
 
@@ -77,9 +78,18 @@ public class DisplayPreferencesController : BaseJellyfinApiController
             ShowSidebar = displayPreferences.ShowSidebar
         };
 
+        _logger.LogError("PREFS: {ItemId}", customPrefs);
         foreach (var homeSection in displayPreferences.HomeSections)
         {
-            dto.CustomPrefs["homesection" + homeSection.Order] = homeSection.Type.ToString().ToLowerInvariant();
+            if (homeSection.Type != HomeSectionType.Collection)
+            {
+                dto.CustomPrefs["homesection" + homeSection.Order] = homeSection.Type.ToString().ToLowerInvariant();
+            }
+
+            // else
+            // {
+            //     dto.CustomPrefs["homesection" + homeSection.Order] = customPrefs["homesection" + homeSection.Order];
+            // }
         }
 
         dto.CustomPrefs["chromecastVersion"] = displayPreferences.ChromecastVersion.ToString().ToLowerInvariant();
@@ -131,6 +141,7 @@ public class DisplayPreferencesController : BaseJellyfinApiController
             HomeSectionType.LiveTv,
             HomeSectionType.NextUp,
             HomeSectionType.LatestMedia,
+            HomeSectionType.Collection,
             HomeSectionType.None,
         };
 
@@ -183,23 +194,29 @@ public class DisplayPreferencesController : BaseJellyfinApiController
         foreach (var key in displayPreferences.CustomPrefs.Keys.Where(key => key.StartsWith("homesection", StringComparison.OrdinalIgnoreCase)))
         {
             var order = int.Parse(key.AsSpan().Slice("homesection".Length), CultureInfo.InvariantCulture);
-            if (!Enum.TryParse<HomeSectionType>(displayPreferences.CustomPrefs[key], true, out var type))
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            if (!Enum.TryParse<HomeSectionType>(displayPreferences.CustomPrefs[key].Split(':')[0], true, out var type))
             {
                 type = order < 8 ? defaults[order] : HomeSectionType.None;
             }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-            displayPreferences.CustomPrefs.Remove(key);
+            if (type != HomeSectionType.Collection)
+            {
+                displayPreferences.CustomPrefs.Remove(key);
+            }
+
             existingDisplayPreferences.HomeSections.Add(new HomeSection { Order = order, Type = type });
         }
 
-        foreach (var key in displayPreferences.CustomPrefs.Keys.Where(key => key.StartsWith("landing-", StringComparison.OrdinalIgnoreCase)))
-        {
-            if (!Enum.TryParse<ViewType>(displayPreferences.CustomPrefs[key], true, out _))
-            {
-                _logger.LogError("Invalid ViewType: {LandingScreenOption}", displayPreferences.CustomPrefs[key]);
-                displayPreferences.CustomPrefs.Remove(key);
-            }
-        }
+        // foreach (var key in displayPreferences.CustomPrefs.Keys.Where(key => key.StartsWith("landing-", StringComparison.OrdinalIgnoreCase)))
+        // {
+        //     if (!Enum.TryParse<ViewType>(displayPreferences.CustomPrefs[key], true, out _))
+        //     {
+        //         _logger.LogError("Invalid ViewType: {LandingScreenOption}", displayPreferences.CustomPrefs[key]);
+        //         displayPreferences.CustomPrefs.Remove(key);
+        //     }
+        // }
 
         var itemPrefs = _displayPreferencesManager.GetItemDisplayPreferences(existingDisplayPreferences.UserId, itemId, existingDisplayPreferences.Client);
         itemPrefs.SortBy = displayPreferences.SortBy ?? "SortName";
