@@ -711,6 +711,7 @@ public sealed class BaseItemRepository
             }
         }
 
+        // _logger.LogInformation("INSERTING");
         context.SaveChanges();
         transaction.Commit();
     }

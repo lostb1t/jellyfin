@@ -530,3 +530,8 @@ dotnet_diagnostic.xUnit1028.severity = none
 
 # CA1826: Do not use Enumerable methods on indexable collections
 dotnet_diagnostic.CA1826.severity = suggestion
+
+[*.cs]
+dotnet_diagnostic.SA0000.severity = none
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.CS0162.severity = none

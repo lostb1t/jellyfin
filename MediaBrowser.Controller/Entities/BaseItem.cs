@@ -1066,6 +1066,99 @@ namespace MediaBrowser.Controller.Entities
 
         public virtual IReadOnlyList<MediaSourceInfo> GetMediaSources(bool enablePathSubstitution)
         {
+            Logger.LogInformation("GetMediaSources for {Path}", Path ?? Name);
+
+            // var items = new List<MediaSourceInfo>
+            // {
+            //     new MediaSourceInfo
+            //     {
+            //         Id = Guid.NewGuid().ToString("N"),
+            //         Name = "Test Stream",
+            //         Path = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_30MB.mp4",
+            //         Protocol = MediaProtocol.Http,
+            //         Container = "mp4",
+            //         Size = 123456789,
+            //         Type = MediaSourceType.Placeholder,
+            //         IsRemote = true,
+            //         MediaStreams = new List<MediaStream>
+            //         {
+            //             new MediaStream
+            //             {
+            //                 Index = 0,
+            //                 Codec = "h264",
+            //                 Type = MediaStreamType.Video,
+            //                 Width = 1280,
+            //                 Height = 720,
+            //                 IsDefault = true
+            //             }
+            //         }
+            //     }
+            // };
+        //     if (this is Video video)
+        //     {
+        //         if (string.IsNullOrEmpty(video.PrimaryVersionId))
+        //         {
+
+        //             var alt = new MediaBrowser.Controller.Entities.Movies.Movie
+        //             {
+        //                 //Id = Guid.NewGuid(),
+        //                 Id = LibraryManager.GetNewItemId("your-ste-key", typeof(MediaBrowser.Controller.Entities.Movies.Movie)),
+        //                 Name = "Test stable",
+        //                 IsVirtualItem = true,
+        //                 Path = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_30MB.mp4",
+        //                 Container = "mp4",
+        //                 // ParentId = Id
+        //             };
+
+        //             alt.SetProviderId(MetadataProvider.Imdb, ProviderIds["Imdb"]);
+        //             alt.PresentationUniqueKey = alt.CreatePresentationUniqueKey();
+
+        //             alt.SetPrimaryVersionId(
+        //                 Id.ToString("N", CultureInfo.InvariantCulture)
+        //             );
+
+
+        //             var alternateVersionsOfPrimary = video.LinkedAlternateVersions.ToList();
+        //             alternateVersionsOfPrimary.Add(new LinkedChild
+        //             {
+        //                 Path = alt.Path,
+        //                 ItemId = alt.Id
+        //             });
+
+        //             video.LinkedAlternateVersions = alternateVersionsOfPrimary.ToArray();
+        //             video.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None)
+        //  .GetAwaiter()
+        //  .GetResult();
+        //         }
+        //     }
+
+            // var alternateVersionsOfPrimary = LinkedAlternateVersions.ToList();
+            // alternateVersionsOfPrimary.Add(new LinkedChild
+            // {
+            //     Path = alt.Path,
+            //     ItemId = alt.Id
+            // });
+            // foreach (var item in items.Where(i => !i.Id.Equals(primaryVersion.Id)))
+            // {
+            //     item.SetPrimaryVersionId(primaryVersion.Id.ToString("N", CultureInfo.InvariantCulture));
+
+            //     await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+
+            //     if (!alternateVersionsOfPrimary.Any(i => string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase)))
+            //     {
+            //         alternateVersionsOfPrimary.Add(new LinkedChild
+            //         {
+            //             Path = item.Path,
+            //             ItemId = item.Id
+            //         });
+            //     }
+            // LibraryManager.CreateItem(alt, this);
+
+
+            // BaseItem.ItemRepository.SaveMediaSources(Id, items);
+            //return items;
+
+
             if (SourceType == SourceType.Channel)
             {
                 var sources = ChannelManager.GetStaticMediaSources(this, CancellationToken.None)
