@@ -33,10 +33,9 @@ namespace MediaBrowser.Controller.Entities
         public Video()
         {
             AdditionalParts = Array.Empty<string>();
-            LocalAlternateVersions = Array.Empty<string>();
             SubtitleFiles = Array.Empty<string>();
             AudioFiles = Array.Empty<string>();
-            LinkedAlternateVersions = Array.Empty<LinkedChild>();
+            AlternateVersions = Array.Empty<Video>();
         }
 
         [JsonIgnore]
@@ -44,9 +43,7 @@ namespace MediaBrowser.Controller.Entities
 
         public string[] AdditionalParts { get; set; }
 
-        public string[] LocalAlternateVersions { get; set; }
-
-        public LinkedChild[] LinkedAlternateVersions { get; set; }
+        public Video[] AlternateVersions { get; set; }
 
         [JsonIgnore]
         public override bool SupportsPlayedStatus => true;
@@ -160,7 +157,7 @@ namespace MediaBrowser.Controller.Entities
         public bool IsStacked => AdditionalParts.Length > 0;
 
         [JsonIgnore]
-        public override bool HasLocalAlternateVersions => LocalAlternateVersions.Length > 0;
+        public override bool HasLocalAlternateVersions => AlternateVersions.Where(x => x.IsFileProtocol).Any();
 
         public static IRecordingsManager RecordingsManager { get; set; }
 
@@ -364,9 +361,9 @@ namespace MediaBrowser.Controller.Entities
             return AdditionalParts.Select(i => LibraryManager.GetNewItemId(i, typeof(Video)));
         }
 
-        public IEnumerable<Guid> GetLocalAlternateVersionIds()
+        public IEnumerable<Guid> GetAlternateVersionIds()
         {
-            return LocalAlternateVersions.Select(i => LibraryManager.GetNewItemId(i, typeof(Video)));
+            return AlternateVersions.Select(i => i.Id);
         }
 
         private string GetUserDataKey(string providerId)
@@ -381,8 +378,8 @@ namespace MediaBrowser.Controller.Entities
 
             return key;
         }
-
-        public IEnumerable<Video> GetLinkedAlternateVersions()
+        
+        public IEnumerable<Video> GetAlternateVersions()
         {
             return LinkedAlternateVersions
                 .Select(GetLinkedChild)
@@ -416,9 +413,10 @@ namespace MediaBrowser.Controller.Entities
                     updateType |= ItemUpdateType.MetadataImport;
                 }
 
-                if (!LocalAlternateVersions.SequenceEqual(newVideo.LocalAlternateVersions, StringComparer.Ordinal))
+                if (!AlternateVersions.Select(a => a.Id)
+                    .SequenceEqual(newVideo.AlternateVersions.Select(b => b.Id)))
                 {
-                    LocalAlternateVersions = newVideo.LocalAlternateVersions;
+                    AlternateVersions = newVideo.AlternateVersions;
                     updateType |= ItemUpdateType.MetadataImport;
                 }
 
@@ -444,17 +442,12 @@ namespace MediaBrowser.Controller.Entities
                 await Task.WhenAll(tasks).ConfigureAwait(false);
             }
 
-            // Must have a parent to have additional parts or alternate versions
-            // In other words, it must be part of the Parent/Child tree
-            // The additional parts won't have additional parts themselves
-            if (IsFileProtocol && SupportsOwnedItems)
+            if (SupportsOwnedItems)
             {
                 if (!IsStacked)
                 {
-                    RefreshLinkedAlternateVersions();
-
-                    var tasks = LocalAlternateVersions
-                        .Select(i => RefreshMetadataForOwnedVideo(options, false, i, cancellationToken));
+                    var tasks = AlternateVersions
+                        .Select(i => RefreshMetadataForOwnedVideo(options, false, i.Id.ToString(), cancellationToken));
 
                     await Task.WhenAll(tasks).ConfigureAwait(false);
                 }
@@ -463,28 +456,12 @@ namespace MediaBrowser.Controller.Entities
             return hasChanges;
         }
 
-        private void RefreshLinkedAlternateVersions()
-        {
-            foreach (var child in LinkedAlternateVersions)
-            {
-                // Reset the cached value
-                if (child.ItemId.IsNullOrEmpty())
-                {
-                    child.ItemId = null;
-                }
-            }
-        }
-
         /// <inheritdoc />
         public override async Task UpdateToRepositoryAsync(ItemUpdateType updateReason, CancellationToken cancellationToken)
         {
             await base.UpdateToRepositoryAsync(updateReason, cancellationToken).ConfigureAwait(false);
 
-            var localAlternates = GetLocalAlternateVersionIds()
-                .Select(i => LibraryManager.GetItemById(i))
-                .Where(i => i is not null);
-
-            foreach (var item in localAlternates)
+            foreach (var item in AlternateVersions)
             {
                 item.ImageInfos = ImageInfos;
                 item.Overview = Overview;
@@ -537,7 +514,7 @@ namespace MediaBrowser.Controller.Entities
                 (this, MediaSourceType.Default)
             };
 
-            list.AddRange(GetLinkedAlternateVersions().Select(i => ((BaseItem)i, MediaSourceType.Grouping)));
+            list.AddRange(AlternateVersions.Select(i => ((BaseItem)i, MediaSourceType.Grouping)));
 
             if (!string.IsNullOrEmpty(PrimaryVersionId))
             {
@@ -545,20 +522,9 @@ namespace MediaBrowser.Controller.Entities
                 {
                     var existingIds = list.Select(i => i.Item1.Id).ToList();
                     list.Add((primary, MediaSourceType.Grouping));
-                    list.AddRange(primary.GetLinkedAlternateVersions().Where(i => !existingIds.Contains(i.Id)).Select(i => ((BaseItem)i, MediaSourceType.Grouping)));
+                    list.AddRange(primary.AlternateVersions.Where(i => !existingIds.Contains(i.Id)).Select(i => ((BaseItem)i, MediaSourceType.Grouping)));
                 }
             }
-
-            var localAlternates = list
-                .SelectMany(i =>
-                {
-                    return i.Item1 is Video video ? video.GetLocalAlternateVersionIds() : Enumerable.Empty<Guid>();
-                })
-                .Select(LibraryManager.GetItemById)
-                .Where(i => i is not null)
-                .ToList();
-
-            list.AddRange(localAlternates.Select(i => (i, MediaSourceType.Default)));
 
             return list;
         }

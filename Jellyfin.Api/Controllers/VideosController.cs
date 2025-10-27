@@ -148,7 +148,7 @@ public class VideosController : BaseJellyfinApiController
             return NotFound();
         }
 
-        if (item.LinkedAlternateVersions.Length == 0)
+        if (item.AlternateVersions.Length == 0)
         {
             item = _libraryManager.GetItemById<Video>(Guid.Parse(item.PrimaryVersionId));
         }
@@ -158,7 +158,7 @@ public class VideosController : BaseJellyfinApiController
             return NotFound();
         }
 
-        foreach (var link in item.GetLinkedAlternateVersions())
+        foreach (var link in item.AlternateVersions)
         {
             link.SetPrimaryVersionId(null);
             link.LinkedAlternateVersions = Array.Empty<LinkedChild>();
